@@ -56,10 +56,18 @@ if __name__ == "__main__":
         # Takes in the desired position on the 2d plane
         desiredX, desiredY = map(float, input('>').split(' '))
 
-        # Calculates the rotational angles of the joints
+        # Calculates the desired rotational angles of the joints
         joint1 = get_joint1_deg(desiredX, desiredY)
         joint2 = get_joint2_deg(math.radians(joint1), desiredY)
 
+        # checking the change of angles
+        joint1Diff = abs(robot.jointAngles[0] - joint1)
+        joint2Diff = abs(robot.jointAngles[1] - joint2)
+        # how long the movement will take in seconds
+        moveSpeed = max(joint1Diff, joint2Diff) / 20
+        joint1Vel = joint1Diff / moveSpeed
+        joint2Vel = joint2Diff / moveSpeed
+
         # Calls the robot to move its butt
-        robot.move_joint1(joint1)
-        robot.move_joint2(joint2)
+        robot.move_joint1(joint1, joint1Vel)
+        robot.move_joint2(joint2, joint2Vel)
