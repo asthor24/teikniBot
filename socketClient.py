@@ -5,10 +5,10 @@ import json
 # Class which acts as an abstraction of the robot on the server
 class RobotClient():
     # Method to initialize the client
-    def __init__(self, verbose=False):
+    def __init__(self, current_joint1=0, current_joint2=0, verbose=False):
         self.sio = Client()
         # here we keep track of the current target positions of the robot
-        self.jointAngles = [0, 0, 0]
+        self.jointAngles = [current_joint1, current_joint2, 0]
         self.verbose = verbose
 
         # here we listen to a specific response from the server, in this case jointUpdate
@@ -32,7 +32,7 @@ class RobotClient():
         # we poll the server for the current angle positions
         self.sio.emit('start', '')
 
-    def move_joint1(self, degrees, velocity=200):
+    def move_joint1(self, degrees, velocity=500):
         self.jointAngles[0] = degrees
         self.sio.emit('jointUpdate', json.dumps({
             "jointIndex": 0,
@@ -40,7 +40,7 @@ class RobotClient():
             "vel": velocity
         }))
 
-    def move_joint2(self, degrees, velocity=200):
+    def move_joint2(self, degrees, velocity=500):
         self.jointAngles[1] = degrees
         self.sio.emit('jointUpdate', json.dumps({
             "jointIndex": 1,
