@@ -23,8 +23,8 @@ def get_joint1_deg(x, height):
         joint2tmp = get_joint2_deg(math.radians(mid), height)
         # Calculates the total length of the robot in centimeters
         val = get_length_cm(math.radians(90 - mid), math.radians(joint2tmp + mid - 90))
-        # If the length is smaller than the desired distance, we make the first joint rotation angle smaller
-        # Otherwise, we make it larger
+        # If the length is smaller than the desired distance, we make the first joint rotation angle larger
+        # Otherwise, we make it smaller
         if val < float(x):
             left_index = mid
         else:
