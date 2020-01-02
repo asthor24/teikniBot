@@ -1,5 +1,6 @@
 import math
 from socketClient import RobotClient
+import time
 
 ROD1LENGTH = 130
 ROD2LENGTH = 100
@@ -23,8 +24,8 @@ def get_joint1_deg(x, height):
         joint2tmp = get_joint2_deg(math.radians(mid), height)
         # Calculates the total length of the robot in centimeters
         val = get_length_cm(math.radians(90 - mid), math.radians(joint2tmp + mid - 90))
-        # If the length is smaller than the desired distance, we make the first joint rotation angle larger
-        # Otherwise, we make it smaller
+        # If the length is smaller than the desired distance, we make the first joint rotation angle smaller
+        # Otherwise, we make it larger
         if val < float(x):
             left_index = mid
         else:
@@ -56,13 +57,47 @@ if __name__ == "__main__":
         # Takes in the desired position on the 2d plane
         desiredX, desiredY = map(float, input('>').split(' '))
 
-        # Calculates the desired rotational angles of the joints
+        # Calculates the rotational angles of the joints
         joint1 = get_joint1_deg(desiredX, desiredY)
         joint2 = get_joint2_deg(math.radians(joint1), desiredY)
 
+        current_joint1 = robot.jointAngles[0]
+        current_joint2 = robot.jointAngles[1]
+
+        currentX = get_length_cm(math.radians(90-current_joint1), math.radians(current_joint2 + current_joint1 - 90))
+
+        cur = currentX
+
+        while True:
+            j1 = get_joint1_deg(cur,desiredY)
+            j2 = get_joint2_deg(math.radians(j1),desiredY)
+            robot.move_joint1(j1)
+            robot.move_joint2(j2)
+            if desiredX > currentX:
+                cur += 0.5
+                if cur > desiredX:
+                    break
+            else:
+                cur -= 0.5
+                if cur < desiredX:
+                    break
+            time.sleep(0.05)
+
+
+
+        """iteration = (joint1-current_joint1)/20
+        print(iteration)
+        current = current_joint1
+        for x in range(21):
+            print(current)
+            robot.move_joint1(current)
+            robot.move_joint2(get_joint2_deg(math.radians(current), desiredY))
+            current += iteration
+            time.sleep(0.5)
         # checking the change of angles
-        joint1Diff = abs(robot.jointAngles[0] - joint1)
-        joint2Diff = abs(robot.jointAngles[1] - joint2)
+        joint1Diff = abs(current_joint1 - joint1)
+        joint2Diff = abs(current_joint2 - joint2)
+
         # how long the movement will take in seconds
         moveSpeed = max(joint1Diff, joint2Diff) / 20
         joint1Vel = joint1Diff / moveSpeed
@@ -70,4 +105,4 @@ if __name__ == "__main__":
 
         # Calls the robot to move its butt
         robot.move_joint1(joint1, joint1Vel)
-        robot.move_joint2(joint2, joint2Vel)
+        robot.move_joint2(joint2, joint2Vel)"""
