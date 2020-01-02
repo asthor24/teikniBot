@@ -83,7 +83,8 @@ if __name__ == "__main__":
                     break
             time.sleep(0.05)
 
-
+        robot.move_joint1(joint1)
+        robot.move_joint2(joint2)
 
         """iteration = (joint1-current_joint1)/20
         print(iteration)
