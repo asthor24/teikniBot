@@ -4,7 +4,7 @@ import time
 
 ROD1LENGTH = 130
 ROD2LENGTH = 100
-
+ROBOT_HEIGHT = 21.5
 
 # Function which calculates the length of the robot on the x-axis in centimeters
 def get_length_cm(joint1_rad, joint2_rad):
@@ -36,7 +36,7 @@ def get_joint1_deg(x, height):
 
 # Function for finding the rotation angle of the second joint in degrees
 def get_joint2_deg(first_joint_rad, surface_height):
-    checking_value = (-ROD1LENGTH * math.sin(math.pi / 2 - first_joint_rad) + surface_height) / ROD2LENGTH
+    checking_value = (-ROD1LENGTH * math.sin(math.pi / 2 - first_joint_rad) + surface_height - ROBOT_HEIGHT) / ROD2LENGTH
     # Checks to see if the desired movement is possible. I will possibly implement error flag for this stuff later
     # The value of checking_value will become larger than 1 or smaller than -1 if the movement is not possible
     if checking_value > 1:
@@ -46,45 +46,113 @@ def get_joint2_deg(first_joint_rad, surface_height):
     # Finish the calculation
     return 180 - math.degrees(first_joint_rad + math.pi / 2 + math.asin(checking_value))
 
+class RobotController:
+    def __init__(self, robotObj):
+        self.robotObj = robotObj
+        self.X = robot.get_X()
+        self.Y = robot.get_Y()
+        self.Z = self.X
+        robotObj.move_joint3(0)
+
+    def set_Y(self, desiredY):
+        current_joint1 = robot.jointAngles[0]
+        current_joint2 = robot.jointAngles[1]
+
+        currentX = get_length_cm(math.radians(90 - current_joint1),
+                                 math.radians(current_joint2 + current_joint1 - 90))
+
+        joint1 = get_joint1_deg(currentX, desiredY)
+        joint2 = get_joint2_deg(math.radians(joint1), desiredY)
+
+        self.robotObj.move_joint1(joint1)
+        self.robotObj.move_joint2(joint2)
+
+        self.Y = desiredY
+
+    def set_X(self, desiredX):
+        # Calculates the rotational angles of the joints
+        joint1 = get_joint1_deg(desiredX, self.Y)
+        joint2 = get_joint2_deg(math.radians(joint1), self.Y)
+
+        self.robotObj.move_joint1(joint1)
+        self.robotObj.move_joint2(joint2)
+
+        self.X = desiredX
+
 
 # Main Function
 if __name__ == "__main__":
     # Initializes the socket client
     robot = RobotClient()
+    robotController = RobotController(robot)
 
     # Start endless loop
     while True:
-        # Takes in the desired position on the 2d plane
-        desiredX, desiredY = map(float, input('>').split(' '))
+        input_list = input('>').split()
+        command_name, parameters = input_list[0], list(map(float, input_list[1:]))
 
-        # Calculates the rotational angles of the joints
-        joint1 = get_joint1_deg(desiredX, desiredY)
-        joint2 = get_joint2_deg(math.radians(joint1), desiredY)
+        if command_name == "setY":
+            robotController.set_Y(parameters[0])
 
-        current_joint1 = robot.jointAngles[0]
-        current_joint2 = robot.jointAngles[1]
+        elif command_name == "setX":
+            robotController.set_X(parameters[0])
 
-        currentX = get_length_cm(math.radians(90-current_joint1), math.radians(current_joint2 + current_joint1 - 90))
+        elif command_name == "gotoxy":
+            # Takes in the desired position on the 2d plane
+            desiredX, desiredY = parameters
 
-        cur = currentX
+            # Calculates the rotational angles of the joints
+            joint1 = get_joint1_deg(desiredX, desiredY)
+            joint2 = get_joint2_deg(math.radians(joint1), desiredY)
 
-        while True:
-            j1 = get_joint1_deg(cur,desiredY)
-            j2 = get_joint2_deg(math.radians(j1),desiredY)
-            robot.move_joint1(j1)
-            robot.move_joint2(j2)
-            if desiredX > currentX:
-                cur += 0.5
-                if cur > desiredX:
-                    break
-            else:
-                cur -= 0.5
-                if cur < desiredX:
-                    break
-            time.sleep(0.05)
 
-        robot.move_joint1(joint1)
-        robot.move_joint2(joint2)
+
+            # BARA ÞANNIG AÐ HANN FER BEINT ÞANGAÐ
+            robotController.set_X(desiredX)
+            robotController.set_Y(desiredY)
+            continue
+            #   EFTIR ÞETTA ER LINE DRAWERINN
+
+            current_joint1 = robot.jointAngles[0]
+            current_joint2 = robot.jointAngles[1]
+
+            currentX = get_length_cm(math.radians(90 - current_joint1),
+                                     math.radians(current_joint2 + current_joint1 - 90))
+
+            cur = currentX
+
+            while True:
+                j1 = get_joint1_deg(cur, desiredY)
+                j2 = get_joint2_deg(math.radians(j1), desiredY)
+                robot.move_joint1(j1)
+                robot.move_joint2(j2)
+                if desiredX > currentX:
+                    cur += 0.5
+                    if cur > desiredX:
+                        break
+                else:
+                    cur -= 0.5
+                    if cur < desiredX:
+                        break
+                time.sleep(0.05)
+
+            robot.move_joint1(joint1)
+            robot.move_joint2(joint2)
+
+        elif command_name == "gotoxz":
+            desiredX, desiredZ = parameters
+
+            joint3 = math.degrees(math.atan(desiredX/desiredZ))
+
+            robot.move_joint3(joint3)
+
+            distance = math.sqrt(math.pow(desiredX, 2) + math.pow(desiredZ, 2))
+            robot.move_joint3(joint3)
+            robotController.set_X(distance)
+
+
+        else:
+            print("invalid command")
 
         """iteration = (joint1-current_joint1)/20
         print(iteration)
@@ -98,12 +166,10 @@ if __name__ == "__main__":
         # checking the change of angles
         joint1Diff = abs(current_joint1 - joint1)
         joint2Diff = abs(current_joint2 - joint2)
-
         # how long the movement will take in seconds
         moveSpeed = max(joint1Diff, joint2Diff) / 20
         joint1Vel = joint1Diff / moveSpeed
         joint2Vel = joint2Diff / moveSpeed
-
         # Calls the robot to move its butt
         robot.move_joint1(joint1, joint1Vel)
         robot.move_joint2(joint2, joint2Vel)"""
