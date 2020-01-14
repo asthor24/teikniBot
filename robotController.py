@@ -1,4 +1,6 @@
 import math
+import matplotlib.pyplot as plt
+import numpy
 from socketClient import RobotClient
 import time
 
@@ -49,14 +51,31 @@ def get_joint2_deg(first_joint_rad, surface_height):
 class RobotController:
     def __init__(self, robotObj):
         self.robotObj = robotObj
-        self.X = robot.get_X()
-        self.Y = robot.get_Y()
+        self.X = self.robotObj.get_X()
+        self.Y = self.robotObj.get_Y()
         self.Z = self.X
-        robotObj.move_joint3(0)
+        self.robotObj.move_joint1(45)
+        self.robotObj.move_joint2(100)
+        self.robotObj.move_joint3(0)
+
+    def get_X(self):
+        return self.robotObj.get_X()
+
+    def get_Y(self):
+        return self.robotObj.get_Y()
+
+    def set_X(self, desiredX):
+        # Calculates the rotational angles of the joints
+        joint1 = get_joint1_deg(desiredX, self.Y)
+        joint2 = get_joint2_deg(math.radians(joint1), self.Y)
+
+        self.robotObj.move_joint1(joint1)
+        self.robotObj.move_joint2(joint2)
+        self.X = desiredX
 
     def set_Y(self, desiredY):
-        current_joint1 = robot.jointAngles[0]
-        current_joint2 = robot.jointAngles[1]
+        current_joint1 = self.robotObj.jointAngles[0]
+        current_joint2 = self.robotObj.jointAngles[1]
 
         currentX = get_length_cm(math.radians(90 - current_joint1),
                                  math.radians(current_joint2 + current_joint1 - 90))
@@ -69,15 +88,23 @@ class RobotController:
 
         self.Y = desiredY
 
-    def set_X(self, desiredX):
-        # Calculates the rotational angles of the joints
-        joint1 = get_joint1_deg(desiredX, self.Y)
-        joint2 = get_joint2_deg(math.radians(joint1), self.Y)
+    def goto_xy(self, desiredX, desiredY):
+        # Takes in the desired position on the 2d plane
+        desiredX, desiredY = parameters
 
-        self.robotObj.move_joint1(joint1)
-        self.robotObj.move_joint2(joint2)
+        # BARA ÞANNIG AÐ HANN FER BEINT ÞANGAÐ
+        self.set_X(desiredX)
+        self.set_Y(desiredY)
 
-        self.X = desiredX
+    def goto_xz(self, desiredX, desiredZ):
+
+        joint3 = math.degrees(math.atan(desiredX / desiredZ))
+
+        self.robotObj.move_joint3(joint3)
+
+        distance = math.sqrt(math.pow(desiredX, 2) + math.pow(desiredZ, 2))
+        self.robotObj.move_joint3(joint3)
+        self.set_X(distance)
 
 
 # Main Function
@@ -100,17 +127,15 @@ if __name__ == "__main__":
         elif command_name == "gotoxy":
             # Takes in the desired position on the 2d plane
             desiredX, desiredY = parameters
+            robotController.goto_xy(desiredX, desiredY)
+            continue
 
+            # LINEDRAWING INTERMEDIATE STEP FUNCTIONALITY
+            '''
             # Calculates the rotational angles of the joints
             joint1 = get_joint1_deg(desiredX, desiredY)
             joint2 = get_joint2_deg(math.radians(joint1), desiredY)
 
-
-
-            # BARA ÞANNIG AÐ HANN FER BEINT ÞANGAÐ
-            robotController.set_X(desiredX)
-            robotController.set_Y(desiredY)
-            continue
             #   EFTIR ÞETTA ER LINE DRAWERINN
 
             current_joint1 = robot.jointAngles[0]
@@ -138,18 +163,35 @@ if __name__ == "__main__":
 
             robot.move_joint1(joint1)
             robot.move_joint2(joint2)
+            '''
 
         elif command_name == "gotoxz":
             desiredX, desiredZ = parameters
+            robotController.goto_xz(desiredX, desiredZ)
 
-            joint3 = math.degrees(math.atan(desiredX/desiredZ))
+        elif command_name == "draw":
+            preciseness = 0.5
+            fromX, fromZ, targetX, targetZ = parameters
 
-            robot.move_joint3(joint3)
+            diff = math.sqrt(math.pow(fromX-targetX, 2) + math.pow(fromZ-targetZ, 2))
 
-            distance = math.sqrt(math.pow(desiredX, 2) + math.pow(desiredZ, 2))
-            robot.move_joint3(joint3)
-            robotController.set_X(distance)
+            num_splits = math.floor(diff/preciseness)
 
+            x_coordinates = []
+            for x in range(num_splits+1):
+                x_coordinates.append(fromX+x*(targetX-fromX)/num_splits)
+            z_coordinates = []
+            for x in range(num_splits+1):
+                z_coordinates.append(fromZ+x*(targetZ-fromZ)/num_splits)
+            '''
+            MATPLOTLIB DATADISPLAY
+            plt.plot(x_coordinates, z_coordinates, 'ro')
+            plt.axis([0, 200, 0, 200])
+            plt.show()
+            '''
+            for index in range(len(x_coordinates)):
+                robotController.goto_xz(x_coordinates[index], z_coordinates[index])
+                time.sleep(0.1)
 
         else:
             print("invalid command")
