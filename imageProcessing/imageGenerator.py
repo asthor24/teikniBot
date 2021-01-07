@@ -1,22 +1,29 @@
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageEnhance
 from random import randint
 import math
 import sys
 import cv2
 import numpy
 import ctypes
+from scipy.spatial import Delaunay
+import matplotlib.pyplot as plt
 
+if __name__ == '__main__':
+    from imageParser import parseSource
+else:
+    from .imageParser import parseSource
 
 sys.setrecursionlimit(100000)
 
 MIN_DIST = 50
 MAX_CONNECTED = 10
 SENSITIVITY = 5
-DOT_SPACE = 7
-DOT_SENSITIVITY = 30
-IMG_NUMBER = 3
+DOT_SPACE = 5
+DOT_SENSITIVITY = 5
+IMG_NUMBER = 4
 SCALAR = 1
-CONTRAST = 0.5
+CONTRAST = 2
+# CONTRAST = 1 - CONTRAST
 MAX_DISTANCE = 100
 
 # get Screen Size
@@ -46,6 +53,7 @@ def drawPILImg(title, img, delay=0):
     opencvnew = cv2.cvtColor(numpy.array(img), cv2.COLOR_RGB2BGR)
     showImage(title, opencvnew)
     cv2.waitKey(delay)
+
 
 def distance(dx, dy):
     return math.sqrt(dx * dx + dy * dy)
@@ -77,8 +85,9 @@ def dfs(at, last, visited, adj, allPoints):
     for nxt in adj[at]:
         p1 = allPoints[nxt]
         p2 = allPoints[last]
-        #print(type(arr[p1[0], p1[1]]))
-        if distance(abs(p1[0] - p2[0]), abs(p1[1] - p2[1])) >= MIN_DIST * ((arr[p1[0], p1[1]] + SENSITIVITY) / 255) * SENSITIVITY:
+        # print(type(arr[p1[0], p1[1]]))
+        if distance(abs(p1[0] - p2[0]), abs(p1[1] - p2[1])) >= MIN_DIST * (
+                (arr[p1[0], p1[1]] + SENSITIVITY) / 255) * SENSITIVITY:
             points.append(allPoints[nxt])
             dfs(nxt, nxt, visited, adj, allPoints)
         else:
@@ -100,151 +109,130 @@ def dfs(at, last, visited, adj, allPoints):
 #                     mn = d
 #                     mnidx =
 
+parses = parseSource(f'{IMG_NUMBER}.source.jpg')
+edgeImg = Image.fromarray(parses['edges'])
+grayscaleImg = Image.fromarray(parses['img'])
 
-with Image.open(f"imgs/{IMG_NUMBER}.edges.jpg") as im:
-    rows, cols = im.size
-    allPoints = []
-    arr = im.load()
-    for row in range(rows):
-        for col in range(cols):
-            if arr[row, col] == 1:
-                allPoints.append((row, col))
+rows, cols = edgeImg.size
+allPoints = []
+arr = edgeImg.load()
+for row in range(rows):
+    for col in range(cols):
+        if arr[row, col] == 0:
+            allPoints.append((row, col))
 
-    vis = [[-1 for _ in range(cols)] for _ in range(rows)]
-    for idx, (i, j) in enumerate(allPoints):
-        vis[i][j] = idx
+vis = [[-1 for _ in range(cols)] for _ in range(rows)]
+for idx, (i, j) in enumerate(allPoints):
+    vis[i][j] = idx
 
-    diffs = generate_diffs()
+diffs = generate_diffs()
 
-    adj = [[] for _ in allPoints]
-    root = allPoints[0]
-    for idx, (row, col) in enumerate(allPoints):
-        for diff in diffs:
-            newRow = row + diff[0]
-            newCol = col + diff[1]
-            if newRow < 0 or newCol < 0 or newRow >= rows or newCol >= cols:
+adj = [[] for _ in allPoints]
+if len(allPoints) == 0:
+    raise Exception('No edges detected')
+root = allPoints[0]
+for idx, (row, col) in enumerate(allPoints):
+    for diff in diffs:
+        newRow = row + diff[0]
+        newCol = col + diff[1]
+        if newRow < 0 or newCol < 0 or newRow >= rows or newCol >= cols:
+            continue
+        newIdx = vis[newRow][newCol]
+        if newIdx != -1:
+            adj[idx].append(newIdx)
+visited = [False for _ in allPoints]
+for i in range(len(allPoints)):
+    if not visited[i]:
+        points.append(allPoints[i])
+        dfs(i, i, visited, adj, allPoints)
+
+rows, cols = grayscaleImg.size
+rows *= SCALAR
+cols *= SCALAR
+# for row in range(rows):
+#    for col in range(cols):
+#        if arr[row, col] < 240:
+#            im.putpixel((row, col), 0)
+
+# búa til punktana á edgunum
+
+# generatea (semi)random punkta
+# teikna þríhyrninga
+grayscaleImg = grayscaleImg.convert("RGB")
+grayscaleImg = grayscaleImg.resize((rows, cols), Image.ANTIALIAS)
+
+arr = grayscaleImg.load()
+print(grayscaleImg.size, rows, cols)
+
+new = Image.new("RGBA", (rows, cols), (0, 0, 0, 0))
+
+print(len(points))
+draw = ImageDraw.Draw(new)
+print('Drawing selected points')
+for (x, y) in points:
+    r = 2
+    leftUpPoint = coords(x - r, y - r)
+    rightDownPoint = coords(x + r, y + r)
+    twoPointList = [leftUpPoint, rightDownPoint]
+    draw.ellipse(twoPointList, fill=(0, 0, 255, 255))
+    # im.putpixel(point, (255, 0, 0))
+print('Drawing all points')
+for (x, y) in allPoints:
+    r = 1
+    leftUpPoint = coords(x - r, y - r)
+    rightDownPoint = coords(x + r, y + r)
+    twoPointList = [leftUpPoint, rightDownPoint]
+    draw.ellipse(twoPointList, fill=(255, 0, 0, 255))
+    # im.putpixel(point, (255, 0, 0))
+    # im.paste(new, (0, 0), new)
+    # drawPILImg('d', im, 1)
+
+for idx, points in enumerate(adj):
+    for point in points:
+        # print(allPoints[idx], allPoints[point])
+        draw.line(coords(allPoints[idx][0], allPoints[idx][1], allPoints[point][0], allPoints[point][1]),
+                  fill=(64, 64, 0, 255))
+
+print('Drawing contrasted image')
+contrastEnhancer = ImageEnhance.Contrast(grayscaleImg)
+
+contrast = contrastEnhancer.enhance(CONTRAST)
+
+contrastArr = contrast.load()
+
+print('Drawing dots')
+dots = Image.new("RGBA", (rows, cols), (0, 0, 0, 0))
+dotsDraw = ImageDraw.Draw(dots)
+points = []
+where = [[-1 for _ in range(cols)] for _ in range(rows)]
+for x in range(0, rows, DOT_SPACE):
+    for y in range(0, cols, DOT_SPACE):
+        # print(randint(1, 100) / 100, contrastArr[row, col][0] / 255)
+        if randint(1, 100) / 100 >= (contrastArr[x, y][0] - DOT_SENSITIVITY) / 255:
+            r = 1
+            xn = x + randint(-1, 1)
+            yn = y + randint(-1, 1)
+            if xn < 0 or yn < 0 or xn >= rows or yn >= cols:
                 continue
-            newIdx = vis[newRow][newCol]
-            if newIdx != -1:
-                adj[idx].append(newIdx)
-    visited = [False for _ in allPoints]
-    for i in range(len(allPoints)):
-        if not visited[i]:
-            points.append(allPoints[i])
-            dfs(i, i, visited, adj, allPoints)
+            points.append([xn, -yn])
+            where[xn][yn] = len(points) - 1
+            leftUpPoint = coords(xn - r, yn - r)
+            rightDownPoint = coords(xn + r, yn + r)
 
-with Image.open(f"imgs/{IMG_NUMBER}.grayscale.jpg") as im:
+            twoPointList = [leftUpPoint, rightDownPoint]
+            dotsDraw.ellipse(twoPointList, fill=(0, 255, 0, 80))
+points = numpy.array(points)
 
-    rows, cols = im.size
-    rows *= SCALAR
-    cols *= SCALAR
-    # for row in range(rows):
-    #    for col in range(cols):
-    #        if arr[row, col] < 240:
-    #            im.putpixel((row, col), 0)
+print('Triangulating points')
+tri = Delaunay(points)
 
-    # búa til punktana á edgunum
+plt.rcParams["figure.figsize"] = (12, 20)
 
-    # generatea (semi)random punkta
-    # teikna þríhyrninga
-    im = im.convert("RGB")
+print(tri.simplices)
+plt.axis('off')
+plt.triplot(points[:, 0], points[:, 1], tri.simplices)
+# plt.plot(points[:, 0], points[:, 1], 'o')
+plt.show(bbox_inches='tight', pad_inches=0, transparent="True")
 
-    im = im.resize((rows, cols), Image.ANTIALIAS)
-
-    arr = im.load()
-    print(im.size, rows, cols)
-
-    new = Image.new("RGBA", (rows, cols), (0, 0, 0, 0))
-
-    print(len(points))
-    draw = ImageDraw.Draw(new)
-    for (x, y) in points:
-        r = 2
-        leftUpPoint = coords(x - r, y - r)
-        rightDownPoint = coords(x + r, y + r)
-        twoPointList = [leftUpPoint, rightDownPoint]
-        draw.ellipse(twoPointList, fill=(0, 0, 255, 255))
-        # im.putpixel(point, (255, 0, 0))
-    for (x, y) in allPoints:
-        r = 1
-        leftUpPoint = coords(x - r, y - r)
-        rightDownPoint = coords(x + r, y + r)
-        twoPointList = [leftUpPoint, rightDownPoint]
-        draw.ellipse(twoPointList, fill=(255, 0, 0, 255))
-        # im.putpixel(point, (255, 0, 0))
-        # im.paste(new, (0, 0), new)
-        # drawPILImg('d', im, 1)
-
-    for idx, points in enumerate(adj):
-        for point in points:
-            # print(allPoints[idx], allPoints[point])
-            draw.line(coords(allPoints[idx][0], allPoints[idx][1], allPoints[point][0], allPoints[point][1]),
-                      fill=(64, 64, 0, 255))
-
-    contrast = Image.new("RGB", (rows, cols), (0, 0, 0, 0))
-    #drawDots = ImageDraw.Draw(dots)
-
-    sm = 0
-    for i in range(rows):
-        for j in range(cols):
-            sm += arr[i, j][0]
-    avg = (sm / (rows * cols)) / 255
-
-    otherPoints = []
-    for i in range(0, rows):
-        for j in range(0, cols):
-            #print(i, j, rows, cols)
-            #print(arr[i, j])
-            #if randint(1, 1000) / 1000 >= math.pow((arr[i, j][0] / 255), 1 / 10):
-            #    otherPoints.append((i, j))
-            val = (arr[i, j][0] / 255)
-            offset = val - avg
-            diff = abs(offset) ** CONTRAST
-            if offset < 0:
-                color = int(255 * (avg - diff))
-            else:
-                color = int(255 * (avg + diff))
-            contrast.putpixel((i, j), (color, color, color))
-
-    contrastArr = contrast.load()
-    #contrast.show()
-
-    dots = Image.new("RGBA", (rows, cols), (0,0,0,0))
-    dotsDraw = ImageDraw.Draw(dots)
-    points = []
-    where = [[-1 for _ in range(cols)] for _ in range(rows)]
-    for x in range(0, rows, DOT_SPACE):
-        for y in range(0, cols, DOT_SPACE):
-            #print(randint(1, 100) / 100, contrastArr[row, col][0] / 255)
-            if randint(1, 100) / 100 >= (contrastArr[x, y][0] - DOT_SENSITIVITY) / 255:
-                r = 1
-                xn = x + randint(-1, 1)
-                yn = y + randint(-1, 1)
-                points.append((xn, yn))
-                where[xn][yn] = len(points) - 1
-                leftUpPoint = coords(xn - r, yn - r)
-                rightDownPoint = coords(xn + r, yn + r)
-
-                twoPointList = [leftUpPoint, rightDownPoint]
-                dotsDraw.ellipse(twoPointList, fill=(0, 255, 0))
-
-
-    contrast.paste(dots, (0, 0), dots)
-    contrast.show()
-    # dots.show()
-    # # for (x, y) in otherPoints:
-    #     r = 2
-    #     leftUpPoint = coords(x - r, y - r)
-    #     rightDownPoint = coords(x + r, y + r)
-    #     twoPointList = [leftUpPoint, rightDownPoint]
-    #     draw.ellipse(twoPointList, fill=(0, 255, 0, 255))
-
-
-    # draw.ellipse()
-    im.paste(new, (0, 0), new)
-
-    # im.show()
-    drawPILImg('d', im)
-    # draw.line((0, 0) + im.size, fill=64)
-    # draw.line((0, im.size[1], im.size[0], 0), fill=64)
-    # im.save("test.png", "PNG")
+contrast.paste(dots, (0, 0), dots)
+drawPILImg('contrast', contrast)

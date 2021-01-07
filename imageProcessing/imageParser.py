@@ -2,10 +2,11 @@ import os
 import cv2
 import numpy as np
 
-if __name__ == '__main__':
-    from constants import IMG_DIR
-else:
-    from .constants import IMG_DIR
+from constants import IMG_DIR
+# if __name__ == '__main__':
+#     pass
+# else:
+#     from .constants import IMG_DIR
 
 import ctypes
 
@@ -60,6 +61,8 @@ def parseSource(filename):
     # thresh = cv2.bitwise_not(thresh, thresh)
 
     thresh_edges = cv2.Canny(thresh, 300, 400)
+
+    img = cv2.GaussianBlur(img,(15,15),0)
 
     # display_images = [img, raw_img_edges, thresh, thresh_edges]
     return {
