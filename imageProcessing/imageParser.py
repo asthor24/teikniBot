@@ -14,17 +14,25 @@ def scale_img(img, scale_percent=50):
 
 
 for filename in files:
-    if '.jpg' in filename:
+    if 'source' in filename:
+        number = filename.split('.')[0]
         img = cv2.imread(filename, 0)
         # getting edges from the pure image
-        raw_img_edges = cv2.Canny(img, 100, 250)
+        raw_img_edges = cv2.Canny(img, 650, 700)
 
         # getting contours from the edge image
         kernel = np.ones((3, 3), dtype=np.uint8)
         closing = cv2.morphologyEx(raw_img_edges, cv2.MORPH_CLOSE, kernel)
         contours, hierarchy = cv2.findContours(closing, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         actualContour = max(contours, key=cv2.contourArea)
+        ret, thresh = cv2.threshold(img, 210, 300, 0)
+        thresh_edges = cv2.Canny(thresh, 100, 250)
 
+        display_images = [img, raw_img_edges, thresh, thresh_edges]
+        cv2.imshow('test', cv2.hconcat([scale_img(b, 50) for b in display_images]))
+        cv2.imwrite(number + '.grayscale.jpg', img)
+        cv2.imwrite(number + '.edges.jpg', raw_img_edges)
+        continue
         # deciding where to cut the image
         hull = cv2.convexHull(actualContour, returnPoints=False)
         conDef = cv2.convexityDefects(actualContour, hull)
