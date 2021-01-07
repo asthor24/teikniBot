@@ -1,14 +1,18 @@
 from PIL import Image, ImageDraw
 import math
 import sys
+
 sys.setrecursionlimit(100000)
 
 MIN_DIST = 50
 MAX_CONNECTED = 10
 IMG_NUMBER = 3
+SCALAR = 4
+
 
 def distance(dx, dy):
     return math.sqrt(dx * dx + dy * dy)
+
 
 def generate_diffs():
     ans = []
@@ -21,7 +25,13 @@ def generate_diffs():
                 ans.append((-d1, -d2))
     return ans
 
+
+def coords(*args):
+    return tuple(i * SCALAR for i in args)
+
 points = []
+
+
 def dfs(at, last, visited, adj, allPoints):
     if visited[at]:
         return
@@ -71,9 +81,9 @@ with Image.open(f"imgs/{IMG_NUMBER}.edges.jpg") as im:
 with Image.open(f"imgs/{IMG_NUMBER}.grayscale.jpg") as im:
     arr = im.load()
     rows, cols = im.size
-    rows *= 20
-    cols *= 20
-    #for row in range(rows):
+    rows *= SCALAR
+    cols *= SCALAR
+    # for row in range(rows):
     #    for col in range(cols):
     #        if arr[row, col] < 240:
     #            im.putpixel((row, col), 0)
@@ -84,24 +94,24 @@ with Image.open(f"imgs/{IMG_NUMBER}.grayscale.jpg") as im:
     # teikna þríhyrninga
     im = im.convert("RGB")
 
-    im.resize((rows, cols), Image.ANTIALIAS)
+    im = im.resize((rows, cols), Image.ANTIALIAS)
+    print(im.size, rows, cols)
 
-    new = Image.new("RGBA", (rows, cols), (0,0,0,0))
-
+    new = Image.new("RGBA", (rows, cols), (0, 0, 0, 0))
 
     print(len(points))
     draw = ImageDraw.Draw(new)
     for (x, y) in points:
-        r = 5
-        leftUpPoint = (x - r, y - r)
-        rightDownPoint = (x + r, y + r)
+        r = 2
+        leftUpPoint = coords(x - r, y - r)
+        rightDownPoint = coords(x + r, y + r)
         twoPointList = [leftUpPoint, rightDownPoint]
-        draw.ellipse(twoPointList, fill=(0,0,255,255))
+        draw.ellipse(twoPointList, fill=(0, 0, 255, 255))
         # im.putpixel(point, (255, 0, 0))
     for (x, y) in allPoints:
-        r = 3
-        leftUpPoint = (x - r, y - r)
-        rightDownPoint = (x + r, y + r)
+        r = 1
+        leftUpPoint = coords(x - r, y - r)
+        rightDownPoint = coords(x + r, y + r)
         twoPointList = [leftUpPoint, rightDownPoint]
         draw.ellipse(twoPointList, fill=(255, 0, 0, 255))
         # im.putpixel(point, (255, 0, 0))
@@ -109,10 +119,11 @@ with Image.open(f"imgs/{IMG_NUMBER}.grayscale.jpg") as im:
     for idx, points in enumerate(adj):
         for point in points:
             # print(allPoints[idx], allPoints[point])
-            draw.line((allPoints[idx][0], allPoints[idx][1], allPoints[point][0], allPoints[point][1]), fill=(64, 64, 0, 255))
+            draw.line(coords(allPoints[idx][0], allPoints[idx][1], allPoints[point][0], allPoints[point][1]),
+                      fill=(64, 64, 0, 255))
 
     # draw.ellipse()
-    im.paste(new, (0,0), new)
+    im.paste(new, (0, 0), new)
 
     im.show()
     # draw.line((0, 0) + im.size, fill=64)

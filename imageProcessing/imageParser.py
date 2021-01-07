@@ -53,8 +53,8 @@ def parseSource(filename):
     # contours, hierarchy = cv2.findContours(closing, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     # actualContour = max(contours, key=cv2.contourArea)
 
-    thresh = cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 11, 2)
-    thresh = cv2.bitwise_not(thresh, thresh)
+    thresh = cv2.adaptiveThreshold(img, 100, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+    # thresh = cv2.bitwise_not(thresh, thresh)
 
     thresh_edges = cv2.Canny(thresh, 100, 250)
 
@@ -63,7 +63,7 @@ def parseSource(filename):
         "img": img,
         "edges": cv2.bitwise_not(raw_img_edges),
         "thresh": thresh,
-        # "thesh_edges": thresh_edges
+        "thesh_edges": thresh_edges
     }
 
     # deciding where to cut the image
@@ -119,4 +119,4 @@ def showSources():
 
 
 if __name__ == "__main__":
-    writeSources()
+    showSources()
