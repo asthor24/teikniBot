@@ -71,6 +71,8 @@ with Image.open(f"imgs/{IMG_NUMBER}.edges.jpg") as im:
 with Image.open(f"imgs/{IMG_NUMBER}.grayscale.jpg") as im:
     arr = im.load()
     rows, cols = im.size
+    rows *= 20
+    cols *= 20
     #for row in range(rows):
     #    for col in range(cols):
     #        if arr[row, col] < 240:
@@ -80,32 +82,37 @@ with Image.open(f"imgs/{IMG_NUMBER}.grayscale.jpg") as im:
 
     # generatea (semi)random punkta
     # teikna þríhyrninga
+    im = im.convert("RGB")
+
+    im.resize((rows, cols), Image.ANTIALIAS)
+
+    new = Image.new("RGBA", (rows, cols), (0,0,0,0))
 
 
     print(len(points))
-    draw = ImageDraw.Draw(im)
+    draw = ImageDraw.Draw(new)
     for (x, y) in points:
         r = 5
         leftUpPoint = (x - r, y - r)
         rightDownPoint = (x + r, y + r)
         twoPointList = [leftUpPoint, rightDownPoint]
-        draw.ellipse(twoPointList, fill=0)
+        draw.ellipse(twoPointList, fill=(0,0,255,255))
         # im.putpixel(point, (255, 0, 0))
     for (x, y) in allPoints:
         r = 3
         leftUpPoint = (x - r, y - r)
         rightDownPoint = (x + r, y + r)
         twoPointList = [leftUpPoint, rightDownPoint]
-        draw.ellipse(twoPointList, fill=255)
+        draw.ellipse(twoPointList, fill=(255, 0, 0, 255))
         # im.putpixel(point, (255, 0, 0))
 
     for idx, points in enumerate(adj):
         for point in points:
             # print(allPoints[idx], allPoints[point])
-            draw.line((allPoints[idx][0], allPoints[idx][1], allPoints[point][0], allPoints[point][1]), fill=64)
+            draw.line((allPoints[idx][0], allPoints[idx][1], allPoints[point][0], allPoints[point][1]), fill=(64, 64, 0, 255))
 
     # draw.ellipse()
-
+    im.paste(new, (0,0), new)
 
     im.show()
     # draw.line((0, 0) + im.size, fill=64)
