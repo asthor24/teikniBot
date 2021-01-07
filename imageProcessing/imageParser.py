@@ -7,12 +7,39 @@ if __name__ == '__main__':
 else:
     from .constants import IMG_DIR
 
+import ctypes
 
-def scale_img(img, scale_percent=50):
-    width = int(img.shape[1] * scale_percent / 100)
-    height = int(img.shape[0] * scale_percent / 100)
-    dim = (width, height)
-    return cv2.resize(img, dim, interpolation=cv2.INTER_AREA)
+# get Screen Size
+user32 = ctypes.windll.user32
+screensize = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
+
+
+def showImage(title, oriimg):
+    W, H = screensize
+    height, width = oriimg.shape
+
+    scaleWidth = float(W) / float(width)
+    scaleHeight = float(H) / float(height)
+    if scaleHeight > scaleWidth:
+        imgScale = scaleWidth
+    else:
+        imgScale = scaleHeight
+
+    newX, newY = oriimg.shape[1] * imgScale, oriimg.shape[0] * imgScale
+    newimg = cv2.resize(oriimg, (int(newX), int(newY)))
+    cv2.imshow(title, newimg)
+
+
+def displayImageGroup(title, images, numRows=4):
+    images = list(images)
+
+    if len(images) > numRows:
+        tiled_images = [[images[j] for j in range(i, i + numRows)] for i in range(0, len(images), numRows)]
+        concattedImg = cv2.vconcat([cv2.hconcat(im_list_h) for im_list_h in tiled_images])
+    else:
+        concattedImg = cv2.hconcat(images)
+    print(concattedImg.shape)
+    showImage(title, concattedImg)
 
 
 def parseSource(filename):
@@ -26,11 +53,18 @@ def parseSource(filename):
     # contours, hierarchy = cv2.findContours(closing, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     # actualContour = max(contours, key=cv2.contourArea)
 
-    ret, thresh = cv2.threshold(img, 210, 300, 0)
+    thresh = cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 11, 2)
+    thresh = cv2.bitwise_not(thresh, thresh)
+
     thresh_edges = cv2.Canny(thresh, 100, 250)
 
     # display_images = [img, raw_img_edges, thresh, thresh_edges]
-    return {"img": img, "edges": cv2.bitwise_not(raw_img_edges), "thresh": thresh, "thesh_edges": thresh_edges}
+    return {
+        "img": img,
+        "edges": cv2.bitwise_not(raw_img_edges),
+        "thresh": thresh,
+        # "thesh_edges": thresh_edges
+    }
 
     # deciding where to cut the image
     hull = cv2.convexHull(actualContour, returnPoints=False)
@@ -78,9 +112,9 @@ def writeSources():
 
 
 def showSources():
-    parse = parseSource()
-    cv2.imshow('test', parse['img'])
-    # cv2.imshow('test', cv2.hconcat([scale_img(b, 50) for b in display_images]))
+    sources = getSources()
+    for number, parsedSource in sources.items():
+        displayImageGroup(number, parsedSource.values(), 4)
     cv2.waitKey(0)
 
 
