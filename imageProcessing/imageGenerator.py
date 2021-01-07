@@ -2,6 +2,9 @@ from PIL import Image, ImageDraw
 from random import randint
 import math
 import sys
+import cv2
+import numpy
+import ctypes
 
 
 sys.setrecursionlimit(100000)
@@ -15,6 +18,34 @@ IMG_NUMBER = 3
 SCALAR = 1
 CONTRAST = 0.5
 MAX_DISTANCE = 100
+
+# get Screen Size
+user32 = ctypes.windll.user32
+screensize = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
+
+
+def showImage(title, oriimg):
+    W, H = screensize
+    W -= 100
+    H -= 100
+    height, width, depth = oriimg.shape
+
+    scaleWidth = float(W) / float(width)
+    scaleHeight = float(H) / float(height)
+    if scaleHeight > scaleWidth:
+        imgScale = scaleWidth
+    else:
+        imgScale = scaleHeight
+
+    newX, newY = oriimg.shape[1] * imgScale, oriimg.shape[0] * imgScale
+    newimg = cv2.resize(oriimg, (int(newX), int(newY)))
+    cv2.imshow(title, newimg)
+
+
+def drawPILImg(title, img, delay=0):
+    opencvnew = cv2.cvtColor(numpy.array(img), cv2.COLOR_RGB2BGR)
+    showImage(title, opencvnew)
+    cv2.waitKey(delay)
 
 def distance(dx, dy):
     return math.sqrt(dx * dx + dy * dy)
@@ -141,6 +172,8 @@ with Image.open(f"imgs/{IMG_NUMBER}.grayscale.jpg") as im:
         twoPointList = [leftUpPoint, rightDownPoint]
         draw.ellipse(twoPointList, fill=(255, 0, 0, 255))
         # im.putpixel(point, (255, 0, 0))
+        # im.paste(new, (0, 0), new)
+        # drawPILImg('d', im, 1)
 
     for idx, points in enumerate(adj):
         for point in points:
@@ -210,7 +243,8 @@ with Image.open(f"imgs/{IMG_NUMBER}.grayscale.jpg") as im:
     # draw.ellipse()
     im.paste(new, (0, 0), new)
 
-    #im.show()
+    # im.show()
+    drawPILImg('d', im)
     # draw.line((0, 0) + im.size, fill=64)
     # draw.line((0, im.size[1], im.size[0], 0), fill=64)
     # im.save("test.png", "PNG")
