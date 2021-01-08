@@ -299,6 +299,16 @@ for triangle in triSimplices:
                 continue
             adj[triangle[i]].append(triangle[j])
 
+for idx, edg in enumerate(adj):
+    s = set()
+    nw = []
+    for v in edg:
+        if not v in s:
+            nw.append(v)
+        else:
+            s.add(v)
+    adj[idx] = nw
+
 edges = printCircuit(adj)
 
 contrast.paste(dots, (0, 0), dots)
