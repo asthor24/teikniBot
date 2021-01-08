@@ -166,32 +166,33 @@ print(grayscaleImg.size, rows, cols)
 
 new = Image.new("RGBA", (rows, cols), (0, 0, 0, 0))
 
-print(len(points))
-draw = ImageDraw.Draw(new)
-print('Drawing selected points')
-for (x, y) in points:
-    r = 2
-    leftUpPoint = coords(x - r, y - r)
-    rightDownPoint = coords(x + r, y + r)
-    twoPointList = [leftUpPoint, rightDownPoint]
-    draw.ellipse(twoPointList, fill=(0, 0, 255, 255))
-    # im.putpixel(point, (255, 0, 0))
-print('Drawing all points')
-for (x, y) in allPoints:
-    r = 1
-    leftUpPoint = coords(x - r, y - r)
-    rightDownPoint = coords(x + r, y + r)
-    twoPointList = [leftUpPoint, rightDownPoint]
-    draw.ellipse(twoPointList, fill=(255, 0, 0, 255))
-    # im.putpixel(point, (255, 0, 0))
-    # im.paste(new, (0, 0), new)
-    # drawPILImg('d', im, 1)
-
-for idx, points in enumerate(adj):
-    for point in points:
-        # print(allPoints[idx], allPoints[point])
-        draw.line(coords(allPoints[idx][0], allPoints[idx][1], allPoints[point][0], allPoints[point][1]),
-                  fill=(64, 64, 0, 255))
+# print(len(points))
+# draw = ImageDraw.Draw(new)
+# print('Drawing selected points')
+# for (x, y) in points:
+#     r = 2
+#     leftUpPoint = coords(x - r, y - r)
+#     rightDownPoint = coords(x + r, y + r)
+#     twoPointList = [leftUpPoint, rightDownPoint]
+#     draw.ellipse(twoPointList, fill=(0, 0, 255, 255))
+#     # im.putpixel(point, (255, 0, 0))
+# print('Drawing all points')
+# for (x, y) in allPoints:
+#     r = 1
+#     leftUpPoint = coords(x - r, y - r)
+#     rightDownPoint = coords(x + r, y + r)
+#     twoPointList = [leftUpPoint, rightDownPoint]
+#     draw.ellipse(twoPointList, fill=(255, 0, 0, 255))
+#     # im.putpixel(point, (255, 0, 0))
+#     # im.paste(new, (0, 0), new)
+#     # drawPILImg('d', im, 1)
+#
+# print('Drawing edges')
+# for idx, points in enumerate(adj):
+#     for point in points:
+#         # print(allPoints[idx], allPoints[point])
+#         draw.line(coords(allPoints[idx][0], allPoints[idx][1], allPoints[point][0], allPoints[point][1]),
+#                   fill=(64, 64, 0, 255))
 
 print('Drawing contrasted image')
 contrastEnhancer = ImageEnhance.Contrast(grayscaleImg)
@@ -225,11 +226,13 @@ points = numpy.array(points)
 
 print('Triangulating points')
 tri = Delaunay(points)
+triSimplices = tri.simplices
+print(f'Point count: {len(points)}, triangle count: {len(triSimplices)}')
 
 plt.rcParams["figure.figsize"] = (12, 20)
 
 plt.axis('off')
-plt.triplot(points[:, 0], points[:, 1], tri.simplices)
+plt.triplot(points[:, 0], points[:, 1], triSimplices)
 # plt.plot(points[:, 0], points[:, 1], 'o')
 plt.show(bbox_inches='tight', pad_inches=0, transparent="True")
 
