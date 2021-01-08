@@ -5,63 +5,27 @@ import sys
 import cv2
 import numpy
 from scipy.spatial import Delaunay
-import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
-    from utils import parseSource, displayImageGroup
+    from utils import parseSource, displayImageGroup, drawPILImg, convertPilToCv2
 else:
-    from .utils import parseSource, displayImageGroup
+    from .utils import parseSource, displayImageGroup, drawPILImg, convertPilToCv2
 
-sys.setrecursionlimit(100000)
-
-MIN_DIST = 50
-MAX_CONNECTED = 10
-SENSITIVITY = 5
-DOT_SENSITIVITY = 10
 IMG_NUMBER = 2
+DOT_SENSITIVITY = 10
 SCALAR = 2
 DOT_SPACE = 10 * SCALAR
 CONTRAST = 2
-# CONTRAST = 1 - CONTRAST
-MAX_DISTANCE = 100
-
-points = []
-
+EDGE_COLOR_DIFF = 5
 
 def distance(dx, dy):
+    # return pythagorean distance
     return math.sqrt(dx * dx + dy * dy)
 
 
-def generate_diffs():
-    ans = []
-    for d1 in range(1, MAX_CONNECTED + 1):
-        for d2 in range(1, MAX_CONNECTED + 1):
-            if distance(d1, d2) <= MAX_CONNECTED:
-                ans.append((d1, d2))
-                ans.append((-d1, d2))
-                ans.append((d1, -d2))
-                ans.append((-d1, -d2))
-    return ans
-
-
 def coords(*args):
+    # multiplies every parameter by the scalar constant
     return tuple(i * SCALAR for i in args)
-
-
-def dfs(at, last, visited, adj, allPoints):
-    if visited[at]:
-        return
-    visited[at] = True
-    for nxt in adj[at]:
-        p1 = allPoints[nxt]
-        p2 = allPoints[last]
-        # print(type(arr[p1[0], p1[1]]))
-        if distance(abs(p1[0] - p2[0]), abs(p1[1] - p2[1])) >= MIN_DIST * (
-                (arr[p1[0], p1[1]] + SENSITIVITY) / 255) * SENSITIVITY:
-            points.append(allPoints[nxt])
-            dfs(nxt, nxt, visited, adj, allPoints)
-        else:
-            dfs(nxt, last, visited, adj, allPoints)
 
 
 def printCircuit(adj):
@@ -136,7 +100,7 @@ grayscaleImg = grayscaleImg.convert("RGB")
 grayscaleImg = grayscaleImg.resize((rows, cols), Image.ANTIALIAS)
 
 arr = grayscaleImg.load()
-print(grayscaleImg.size, rows, cols)
+print("Image size:", grayscaleImg.size)
 
 new = Image.new("RGBA", (rows, cols), (0, 0, 0, 0))
 
@@ -149,21 +113,19 @@ print('Drawing dots')
 dots = Image.new("RGBA", (rows, cols), (0, 0, 0, 0))
 dotsDraw = ImageDraw.Draw(dots)
 points = []
-where = [[-1 for _ in range(cols)] for _ in range(rows)]
 for x in range(0, rows, DOT_SPACE):
     for y in range(0, cols, DOT_SPACE):
-        # print(randint(1, 100) / 100, contrastArr[row, col][0] / 255)
+        # randomize whether a point gets selected, so that lower pixels are more likely
         if randint(1, 100) / 100 >= (contrastArr[x, y][0] - DOT_SENSITIVITY) / 255:
             r = 1
             xn = x + randint(-1, 1)
             yn = y + randint(-1, 1)
             if xn < 0 or yn < 0 or xn >= rows or yn >= cols:
                 continue
-            points.append([xn, yn])
-            where[xn][yn] = len(points) - 1
+            points.append((xn, yn))
+            # draw ellipse on dots image
             leftUpPoint = coords(xn - r, yn - r)
             rightDownPoint = coords(xn + r, yn + r)
-
             twoPointList = [leftUpPoint, rightDownPoint]
             dotsDraw.ellipse(twoPointList, fill=(0, 255, 0, 80))
 points = numpy.array(points)
@@ -173,9 +135,7 @@ tri = Delaunay(points)
 triSimplices = tri.simplices
 print(f'Point count: {len(points)}, triangle count: {len(triSimplices)}')
 
-plt.rcParams["figure.figsize"] = (12, 20)
-
-
+# create adjacency list
 adj = [[] for _ in points]
 for triangle in triSimplices:
     for i in range(3):
@@ -184,6 +144,7 @@ for triangle in triSimplices:
                 continue
             adj[triangle[i]].append(triangle[j])
 
+# remove multiple edges
 for idx, edg in enumerate(adj):
     s = set()
     nw = []
@@ -194,28 +155,32 @@ for idx, edg in enumerate(adj):
             s.add(v)
     adj[idx] = nw
 
+# distance of path is 2 times the sum of lengths of edges, since we visit each edge twice (it is undirected)
 edges = printCircuit(adj)
 
+# draw dots on contrast image
 contrast.paste(dots, (0, 0), dots)
 edgeImg = Image.new("RGB", (rows, cols), (0, 0, 0))
-contrastDraw = ImageDraw.Draw(edgeImg)
+edgeDraw = ImageDraw.Draw(edgeImg)
 
 color = 255
-# edges = map(lambda x: tuple(points[x]), edges)
-# contrastDraw.line(tuple(edges), fill=(color if color < 255 else 255, color - 255 if color > 255 else 255, 255, 255),
-#                   width=SCALAR, joint='curve')
-
 lastPoint = None
 for index, edgeIndex in enumerate(edges):
     edge = points[edgeIndex]
     if index != 0:
-        contrastDraw.line((edge[0], edge[1], lastPoint[0], lastPoint[1]),
-                          fill=(color if color < 255 else 255, color - 255 if color > 255 else 255, 0, 255), width=SCALAR)
+        # draw edge
+        edgeDraw.line((edge[0], edge[1], lastPoint[0], lastPoint[1]),
+                          fill=(color if color < 255 else 255, color - 255 if color > 255 else 255, 0, 255),
+                          width=SCALAR)
+        # display image
         if index % 100 == 0:
             drawPILImg('contrast', edgeImg, 1)
+    # set the last point
     lastPoint = edge
-    color = (color + 5) % 510
+    color = (color + EDGE_COLOR_DIFF) % 510
+# finally show image
 drawPILImg('contrast', edgeImg)
 
+# Show side by side
 # displayImageGroup('d', [convertPilToCv2(contrast), convertPilToCv2(edgeImg)], 2)
 # cv2.waitKey()
