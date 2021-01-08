@@ -215,7 +215,7 @@ for x in range(0, rows, DOT_SPACE):
             yn = y + randint(-1, 1)
             if xn < 0 or yn < 0 or xn >= rows or yn >= cols:
                 continue
-            points.append([xn, -yn])
+            points.append([xn, yn])
             where[xn][yn] = len(points) - 1
             leftUpPoint = coords(xn - r, yn - r)
             rightDownPoint = coords(xn + r, yn + r)
@@ -292,7 +292,7 @@ def printCircuit(adj):
     return ans
 
 adj = [[] for _ in points]
-for triangle in tri.simplices:
+for triangle in triSimplices:
     for i in range(3):
         for j in range(3):
             if i == j:
@@ -301,10 +301,24 @@ for triangle in tri.simplices:
 
 edges = printCircuit(adj)
 
+contrast.paste(dots, (0, 0), dots)
+contrastDraw = ImageDraw.Draw(contrast)
+
+lastPoint = None
+color = 0
+for index, edgeIndex in enumerate(edges):
+    edge = points[edgeIndex]
+    if index != 0:
+        contrastDraw.line((edge[0], edge[1], lastPoint[0], lastPoint[1]), fill=(color, 255, 0, 255))
+        drawPILImg('contrast', contrast, 1)
+    lastPoint = edge
+    if color+10 > 255:
+        color = 0
+    else:
+        color += 10
+
 # plt.axis('off')
 # plt.triplot(points[:, 0], points[:, 1], triSimplices)
 # plt.plot(points[:, 0], points[:, 1], 'o')
 # plt.show(bbox_inches='tight', pad_inches=0, transparent="True")
 
-contrast.paste(dots, (0, 0), dots)
-drawPILImg('contrast', contrast)
