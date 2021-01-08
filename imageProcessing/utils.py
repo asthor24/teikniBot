@@ -12,18 +12,18 @@ screensize = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
 def showImage(title, oriimg):
     """Scales an image to the display size and displays it"""
     W, H = screensize
-    W -= 100
-    H -= 100
+    W -= 200
+    H -= 200
     shape = tuple(oriimg.shape[1::-1])
 
-    scaleWidth = float(W) / float(shape[1])
-    scaleHeight = float(H) / float(shape[0])
+    scaleWidth = float(W) / float(shape[0])
+    scaleHeight = float(H) / float(shape[1])
     if scaleHeight > scaleWidth:
         imgScale = scaleWidth
     else:
         imgScale = scaleHeight
 
-    newX, newY = shape[1] * imgScale, shape[0] * imgScale
+    newX, newY = shape[0] * imgScale, shape[1] * imgScale
     newimg = cv2.resize(oriimg, (int(newX), int(newY)), interpolation=cv2.INTER_AREA)
     cv2.imshow(title, newimg)
 

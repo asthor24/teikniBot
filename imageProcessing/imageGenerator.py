@@ -1,10 +1,13 @@
 from PIL import Image, ImageDraw, ImageEnhance
 from random import randint
 import math
-import sys
-import cv2
 import numpy
 from scipy.spatial import Delaunay
+import ctypes
+# get Screen Size
+user32 = ctypes.windll.user32
+screensize = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
+print(screensize)
 
 if __name__ == '__main__':
     from utils import parseSource, displayImageGroup, drawPILImg, convertPilToCv2
@@ -18,17 +21,22 @@ DOT_SPACE = 10 * SCALAR
 CONTRAST = 2
 EDGE_COLOR_DIFF = 5
 
+
 def distance(dx, dy):
-    # return pythagorean distance
+    """return pythagorean distance"""
     return math.sqrt(dx * dx + dy * dy)
 
 
 def coords(*args):
-    # multiplies every parameter by the scalar constant
+    """multiplies every parameter by the scalar constant"""
     return tuple(i * SCALAR for i in args)
 
 
 def printCircuit(adj):
+    """
+    Hierholzer’s Algorithm for finding the eulerian path through all the edges
+    copy from here: https://www.geeksforgeeks.org/hierholzers-algorithm-directed-graph/
+    """
     # adj represents the adjacency list of
     # the directed graph
     # edge_count represents the number of edges
@@ -149,7 +157,7 @@ for idx, edg in enumerate(adj):
     s = set()
     nw = []
     for v in edg:
-        if not v in s:
+        if v not in s:
             nw.append(v)
         else:
             s.add(v)
@@ -170,8 +178,8 @@ for index, edgeIndex in enumerate(edges):
     if index != 0:
         # draw edge
         edgeDraw.line((edge[0], edge[1], lastPoint[0], lastPoint[1]),
-                          fill=(color if color < 255 else 255, color - 255 if color > 255 else 255, 0, 255),
-                          width=SCALAR)
+                      fill=(color if color < 255 else 255, color - 255 if color > 255 else 255, 0, 255),
+                      width=SCALAR)
         # display image
         if index % 100 == 0:
             drawPILImg('contrast', edgeImg, 1)
