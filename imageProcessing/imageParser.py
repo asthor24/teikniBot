@@ -27,7 +27,7 @@ def showImage(title, oriimg):
         imgScale = scaleHeight
 
     newX, newY = oriimg.shape[1] * imgScale, oriimg.shape[0] * imgScale
-    newimg = cv2.resize(oriimg, (int(newX), int(newY)))
+    newimg = cv2.resize(oriimg, (int(newX), int(newY)), interpolation=cv2.INTER_AREA)
     cv2.imshow(title, newimg)
 
 
@@ -62,7 +62,7 @@ def parseSource(filename):
 
     thresh_edges = cv2.Canny(thresh, 300, 400)
 
-    img = cv2.GaussianBlur(img,(15,15),0)
+    # img = cv2.GaussianBlur(img,(15,15),0)
 
     # display_images = [img, raw_img_edges, thresh, thresh_edges]
     return {
@@ -70,7 +70,7 @@ def parseSource(filename):
         "edges": cv2.bitwise_not(raw_img_edges),
         # "blur": blur,
         "thresh": thresh,
-        "thesh_edges": thresh_edges
+        # "thesh_edges": thresh_edges
     }
 
     # deciding where to cut the image
@@ -117,6 +117,9 @@ def writeSources():
         for filename, objectType in writtenFiles.items():
             cv2.imwrite(f'{IMG_DIR}{number}.{filename}.jpg', parsedSource[objectType])
 
+
+def showParsed(title, parsed):
+    displayImageGroup(title, parsed.values(), 4)
 
 def showSources():
     sources = getSources()
