@@ -18,11 +18,11 @@ sys.setrecursionlimit(100000)
 MIN_DIST = 50
 MAX_CONNECTED = 10
 SENSITIVITY = 5
-DOT_SPACE = 5
+DOT_SPACE = 15
 DOT_SENSITIVITY = 5
 IMG_NUMBER = 4
 SCALAR = 1
-CONTRAST = 2
+CONTRAST = 1.5
 # CONTRAST = 1 - CONTRAST
 MAX_DISTANCE = 100
 
@@ -228,7 +228,6 @@ tri = Delaunay(points)
 
 plt.rcParams["figure.figsize"] = (12, 20)
 
-print(tri.simplices)
 plt.axis('off')
 plt.triplot(points[:, 0], points[:, 1], tri.simplices)
 # plt.plot(points[:, 0], points[:, 1], 'o')
