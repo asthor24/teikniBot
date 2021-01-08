@@ -4,14 +4,13 @@ import math
 import sys
 import cv2
 import numpy
-import ctypes
 from scipy.spatial import Delaunay
 import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
-    from imageParser import parseSource, displayImageGroup
+    from utils import parseSource, displayImageGroup
 else:
-    from .imageParser import parseSource, displayImageGroup
+    from .utils import parseSource, displayImageGroup
 
 sys.setrecursionlimit(100000)
 
@@ -27,38 +26,6 @@ CONTRAST = 2
 MAX_DISTANCE = 100
 
 points = []
-
-print('getting screen size')
-# get Screen Size
-user32 = ctypes.windll.user32
-screensize = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
-
-
-def showImage(title, oriimg):
-    W, H = screensize
-    W -= 100
-    H -= 100
-    height, width, depth = oriimg.shape
-
-    scaleWidth = float(W) / float(width)
-    scaleHeight = float(H) / float(height)
-    if scaleHeight > scaleWidth:
-        imgScale = scaleWidth
-    else:
-        imgScale = scaleHeight
-
-    newX, newY = oriimg.shape[1] * imgScale, oriimg.shape[0] * imgScale
-    newimg = cv2.resize(oriimg, (int(newX), int(newY)), interpolation=cv2.INTER_AREA)
-    cv2.imshow(title, newimg)
-
-
-def convertPilToCv2(img):
-    return cv2.cvtColor(numpy.array(img), cv2.COLOR_RGB2BGR)
-
-
-def drawPILImg(title, img, delay=0):
-    showImage(title, convertPilToCv2(img))
-    cv2.waitKey(delay)
 
 
 def distance(dx, dy):
